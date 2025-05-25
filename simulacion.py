@@ -2,8 +2,30 @@ import logging
 from typing import Tuple
 from math import factorial, log
 from datetime import datetime
+import time
 import random
 from tabulate import tabulate
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
+import os
+# Configuración básica del logger
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+
+app = FastAPI(
+    tittle = "Simulación de un sistema de atencion a clientes"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -79,13 +101,25 @@ def ResoluciónProblema():
     probabilidad_encontrar_espacio = ((clientes - rechazados) / clientes) * 100
     promedio_espacios_disponibles = suma_espacios_disponibles / clientes
 
-    return porcentaje_rechazados, probabilidad_encontrar_espacio, promedio_espacios_disponibles, capacidad
-
+    return tabulación, porcentaje_rechazados, probabilidad_encontrar_espacio, promedio_espacios_disponibles, capacidad
+@app.get("/ejecución/simulación", response_class=HTMLResponse)
 def main():
-    porcentaje_rechazados, probabilidad_encontrar_espacio, promedio_espacios_disponibles, capacidad = ResoluciónProblema()
-    print(f"a) Porcentaje de clientes rechazados: {porcentaje_rechazados:.2f}%")
-    print(f"b) Probabilidad de encontrar espacio: {probabilidad_encontrar_espacio:.2f}%")
-    print(f"c) Porcentaje promedio de espacios disponibles: {promedio_espacios_disponibles / capacidad * 100:.2f}%")
+    tabulación, porcentaje_rechazados, probabilidad_encontrar_espacio, promedio_espacios_disponibles, capacidad = ResoluciónProblema()
+    resultado = (
+        f"<pre>{tabulación}\n"
+        f"a) Porcentaje de clientes rechazados: {porcentaje_rechazados:.2f}%\n"
+        f"b) Probabilidad de encontrar espacio: {probabilidad_encontrar_espacio:.2f}%\n"
+        f"c) Porcentaje promedio de espacios disponibles: {promedio_espacios_disponibles / capacidad * 100:.2f}%\n"
+        f"</pre>"
+    )
+    
+    return resultado
 
+
+# Punto de entrada del programa
 if __name__ == "__main__":
-    main()
+    logger.info("Iniciando servidor FASTAPI...")
+    import uvicorn
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
+    
